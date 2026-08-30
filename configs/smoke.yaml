@@ -1,0 +1,17 @@
+seed: 42
+model_name: openai/clip-vit-base-patch16
+num_labels: 2
+freeze_encoder: true
+image_size: 224
+batch_size: 8
+epochs: 1
+learning_rate: 0.001
+weight_decay: 0.0001
+num_workers: 0
+data:
+  train_manifest: data/manifests/smoke_train.csv
+  val_manifest: data/manifests/smoke_val.csv
+  test_manifest: data/manifests/cifake_test.csv
+output:
+  checkpoint: checkpoints/smoke_best.pt
+  evaluation_dir: outputs/smoke_evaluation

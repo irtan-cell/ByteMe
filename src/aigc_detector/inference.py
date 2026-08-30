@@ -12,7 +12,8 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
 
 def list_images(input_dir: Path) -> list[Path]:
-    return sorted(path for path in input_dir.rglob("*") if path.suffix.lower() in IMAGE_EXTENSIONS)
+    images = (path for path in input_dir.rglob("*") if path.suffix.lower() in IMAGE_EXTENSIONS)
+    return sorted(images, key=lambda path: (len(path.relative_to(input_dir).parts), str(path.relative_to(input_dir)).lower()))
 
 
 def load_detector(checkpoint_path: Path, device: torch.device) -> tuple[ClipBinaryDetector, CLIPImageProcessor]:

@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from aigc_detector.data import ManifestImageDataset  # noqa: E402
 from aigc_detector.model import ClipBinaryDetector  # noqa: E402
-from aigc_detector.training import evaluate, save_checkpoint  # noqa: E402
+from aigc_detector.training import best_available_device, evaluate, save_checkpoint  # noqa: E402
 from aigc_detector.transforms import random_challenge_transform  # noqa: E402
 
 
@@ -37,7 +37,7 @@ def main() -> None:
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = best_available_device()
     processor = CLIPImageProcessor.from_pretrained(config["model_name"])
     train_set = ManifestImageDataset(config["data"]["train_manifest"], processor, random_challenge_transform)
     val_set = ManifestImageDataset(config["data"]["val_manifest"], processor)

@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 
 import pandas as pd
-import torch
 import yaml
 from torch.utils.data import DataLoader
 from transformers import CLIPImageProcessor
@@ -18,7 +17,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from aigc_detector.data import ManifestImageDataset  # noqa: E402
 from aigc_detector.inference import load_detector  # noqa: E402
-from aigc_detector.training import evaluate  # noqa: E402
+from aigc_detector.training import best_available_device, evaluate  # noqa: E402
 from aigc_detector.transforms import EVALUATION_CONDITIONS  # noqa: E402
 
 
@@ -28,7 +27,7 @@ def main() -> None:
     parser.add_argument("--split", choices=("val", "test"), default="test")
     args = parser.parse_args()
     config = yaml.safe_load(args.config.read_text(encoding="utf-8"))
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = best_available_device()
     model, processor = load_detector(ROOT / config["output"]["checkpoint"], device)
     manifest = config["data"][f"{args.split}_manifest"]
     destination = ROOT / config["output"]["evaluation_dir"]

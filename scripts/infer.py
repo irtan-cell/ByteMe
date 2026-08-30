@@ -7,12 +7,11 @@ import json
 import sys
 from pathlib import Path
 
-import torch
-
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from aigc_detector.inference import list_images, load_detector, predict_image  # noqa: E402
+from aigc_detector.training import best_available_device  # noqa: E402
 
 
 def main() -> None:
@@ -24,7 +23,7 @@ def main() -> None:
 
     if not args.input.is_dir():
         parser.error("--input must be an existing image directory")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = best_available_device()
     model, processor = load_detector(args.checkpoint, device)
     predictions = []
     for image_path in list_images(args.input):

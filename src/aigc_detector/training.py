@@ -10,6 +10,14 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 
+def best_available_device() -> torch.device:
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+
 def evaluate(model: nn.Module, loader: DataLoader, device: torch.device) -> tuple[dict[str, float], list[dict[str, float | str | int]]]:
     model.eval()
     labels, probabilities, records = [], [], []

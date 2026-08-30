@@ -35,10 +35,17 @@ def main() -> None:
     test = rows("test")
     if not train or not test:
         raise SystemExit(f"Expected images under {RAW}/train and {RAW}/test")
-    random.Random(SEED).shuffle(train)
-    cut = int(len(train) * 0.9)
-    write("train", train[:cut])
-    write("val", train[cut:])
+    train_split, val_split = [], []
+    for label in (0, 1):
+        class_records = [record for record in train if record["label"] == label]
+        random.Random(SEED + label).shuffle(class_records)
+        cut = int(len(class_records) * 0.9)
+        train_split.extend(class_records[:cut])
+        val_split.extend(class_records[cut:])
+    random.Random(SEED).shuffle(train_split)
+    random.Random(SEED).shuffle(val_split)
+    write("train", train_split)
+    write("val", val_split)
     write("test", test)
 
 

@@ -55,6 +55,12 @@ Place CIFAKE under `data/raw/CIFAKE/` using its published `train/REAL`, `train/F
 python scripts/build_cifake_manifest.py
 ```
 
+Validate the download before building manifests:
+
+```bash
+python scripts/validate_cifake.py --data-root data/raw/CIFAKE
+```
+
 Training and clean-versus-transformed evaluation are the next implementation milestones; their intended settings already live in `configs/baseline.yaml`.
 
 ## Required directory inference

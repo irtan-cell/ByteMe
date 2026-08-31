@@ -1,71 +1,87 @@
-"""Real-world redistribution transforms specified in the TechJam brief."""
-from __future__ import annotations
-
+"""Challenge transformations from TechJam PS5 section 5.2."""
 import io
 import random
-from collections.abc import Callable
 
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter
 
-
-def jpeg_compression(image: Image.Image, quality: int) -> Image.Image:
-    buffer = io.BytesIO()
-    image.save(buffer, format="JPEG", quality=quality)
-    buffer.seek(0)
-    with Image.open(buffer) as compressed:
-        return compressed.convert("RGB").copy()
-
-
-def gaussian_blur(image: Image.Image, sigma: float) -> Image.Image:
-    return image.filter(ImageFilter.GaussianBlur(radius=sigma))
+JPEG_QUALITIES = [90, 70, 50, 30]
+BLUR_SIGMAS = [0.5, 1.0, 2.0]
+RESIZE_SCALES = [0.5, 0.25]
+NOISE_SIGMAS = [0.02, 0.05, 0.10]
+JITTER_STRENGTH = 0.2
+CROP_FRACTION = 0.8
 
 
-def resize_and_upscale(image: Image.Image, scale: float) -> Image.Image:
-    size = (max(1, round(image.width * scale)), max(1, round(image.height * scale)))
-    downscaled = image.resize(size, Image.Resampling.BICUBIC)
-    return downscaled.resize(image.size, Image.Resampling.BICUBIC)
+def jpeg(img, quality):
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, format="JPEG", quality=quality)
+    buf.seek(0)
+    return Image.open(buf).convert("RGB")
 
 
-def gaussian_noise(image: Image.Image, sigma: float) -> Image.Image:
-    """Add zero-mean noise where sigma is expressed on the [0, 1] pixel scale."""
-    array = np.asarray(image, dtype=np.float32) / 255.0
-    noisy = np.clip(array + np.random.normal(0.0, sigma, array.shape), 0.0, 1.0)
-    return Image.fromarray((noisy * 255).astype(np.uint8), mode="RGB")
+def blur(img, sigma):
+    return img.filter(ImageFilter.GaussianBlur(radius=sigma))
 
 
-def center_crop(image: Image.Image, fraction: float = 0.8) -> Image.Image:
-    width, height = image.size
-    crop_width, crop_height = round(width * fraction), round(height * fraction)
-    left, top = (width - crop_width) // 2, (height - crop_height) // 2
-    cropped = image.crop((left, top, left + crop_width, top + crop_height))
-    return cropped.resize(image.size, Image.Resampling.BICUBIC)
+def resize(img, scale):
+    w, h = img.size
+    small = img.resize((max(1, int(w * scale)), max(1, int(h * scale))), Image.BICUBIC)
+    return small.resize((w, h), Image.BICUBIC)
 
 
-def colour_jitter(image: Image.Image, factor: float) -> Image.Image:
-    """Apply one bounded brightness/contrast/saturation adjustment."""
-    operation = random.choice((ImageEnhance.Brightness, ImageEnhance.Contrast, ImageEnhance.Color))
-    return operation(image).enhance(factor)
+def noise(img, sigma, rng):
+    arr = np.asarray(img.convert("RGB"), dtype=np.float32) / 255.0
+    gen = np.random.default_rng(rng.getrandbits(32))
+    arr = arr + gen.normal(0.0, sigma, arr.shape).astype(np.float32)
+    return Image.fromarray((np.clip(arr, 0.0, 1.0) * 255).astype(np.uint8))
 
 
-def random_challenge_transform(image: Image.Image) -> Image.Image:
-    """Apply zero or one transformation so labels remain unchanged during training."""
-    options: list[Callable[[Image.Image], Image.Image]] = [
-        lambda value: jpeg_compression(value, random.choice((90, 70, 50, 30))),
-        lambda value: gaussian_blur(value, random.choice((0.5, 1.0, 2.0))),
-        lambda value: resize_and_upscale(value, random.choice((0.5, 0.25))),
-        lambda value: gaussian_noise(value, random.choice((0.02, 0.05, 0.10))),
-        lambda value: colour_jitter(value, random.choice((0.8, 1.2))),
-        center_crop,
-    ]
-    return random.choice(options)(image) if random.random() < 0.7 else image
+def jitter(img, strength, rng):
+    out = img.convert("RGB")
+    for enhancer in (ImageEnhance.Brightness, ImageEnhance.Contrast, ImageEnhance.Color):
+        out = enhancer(out).enhance(1.0 + rng.uniform(-strength, strength))
+    return out
 
 
-EVALUATION_CONDITIONS: dict[str, Callable[[Image.Image], Image.Image]] = {
-    "clean": lambda image: image,
-    "jpeg_q30": lambda image: jpeg_compression(image, 30),
-    "blur_sigma2": lambda image: gaussian_blur(image, 2.0),
-    "resize_025": lambda image: resize_and_upscale(image, 0.25),
-    "noise_010": lambda image: gaussian_noise(image, 0.10),
-    "crop_80": center_crop,
-}
+def center_crop(img, fraction):
+    w, h = img.size
+    cw, ch = int(w * fraction), int(h * fraction)
+    left, top = (w - cw) // 2, (h - ch) // 2
+    return img.crop((left, top, left + cw, top + ch))
+
+
+def named(img, name, rng):
+    """Apply one transform by its evaluation-grid name, e.g. 'jpeg_30'."""
+    if name == "clean":
+        return img.convert("RGB")
+    kind, _, value = name.partition("_")
+    if kind == "jpeg":
+        return jpeg(img, int(value))
+    if kind == "blur":
+        return blur(img, float(value))
+    if kind == "resize":
+        return resize(img, float(value))
+    if kind == "noise":
+        return noise(img, float(value), rng)
+    if kind == "jitter":
+        return jitter(img, JITTER_STRENGTH, rng)
+    if kind == "crop":
+        return center_crop(img, CROP_FRACTION)
+    raise ValueError(f"unknown transform: {name}")
+
+
+def eval_grid():
+    """Every condition the robustness table must report."""
+    grid = ["clean"]
+    grid += [f"jpeg_{q}" for q in JPEG_QUALITIES]
+    grid += [f"blur_{s}" for s in BLUR_SIGMAS]
+    grid += [f"resize_{s}" for s in RESIZE_SCALES]
+    grid += [f"noise_{s}" for s in NOISE_SIGMAS]
+    grid += ["jitter_20", "crop_80"]
+    return grid
+
+
+def sample_train_transform(rng):
+    """Pick one condition for training-time augmentation."""
+    return rng.choice(eval_grid())

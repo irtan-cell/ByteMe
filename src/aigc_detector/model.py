@@ -26,7 +26,10 @@ class Detector(nn.Module):
         )
 
     def embed(self, pixel_values):
-        out = self.encoder(pixel_values=pixel_values)
+        # Skip autograd through the encoder unless some of it is unfrozen.
+        frozen = not any(p.requires_grad for p in self.encoder.parameters())
+        with torch.set_grad_enabled(not frozen and self.training):
+            out = self.encoder(pixel_values=pixel_values)
         return out.pooler_output
 
     def forward(self, pixel_values):

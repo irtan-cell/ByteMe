@@ -1,19 +1,16 @@
 # ByteMe — Robust AIGC Image Detector
 
-Point it at a folder of images. It writes a JSON file. Each image gets a score
-from 0 to 1 for how likely a generative model made it.
+Point it at a folder of images and it writes a JSON file containing a score
+from 0 to 1 per image, for how likely a generative model made it.
 
 Built for TikTok TechJam 2026, Problem Statement 5: robust detection of
 AI-generated images under real-world transformations.
 
 ## Results
 
-We validated on 2,000 held-out SID_Set images. The set splits evenly between
-real and synthetic.
-
-`TPR@1%FPR` counts how many generated images we catch. It uses the threshold
-that wrongly flags 1% of real photos. That number matters more than accuracy.
-Users lose trust when a platform flags their own photos.
+Validation runs on 2,000 held-out SID_Set images, split evenly between real and
+synthetic. Each row applies one condition from the brief's transformation grid
+to every image in that set.
 
 | Condition | AUROC | Acc@0.5 | TPR@1%FPR | AUROC gap |
 |---|---|---|---|---|
@@ -33,15 +30,15 @@ Users lose trust when a platform flags their own photos.
 | jitter_20 | 0.9991 | 0.9850 | 0.9817 | 0.0002 |
 | crop_80 | 0.9993 | 0.9895 | 0.9909 | 0.0000 |
 
-Noise hurts us most. At sigma 0.10 we catch 76% of generated images. On clean
-images we catch 99%. AUROC barely moves. The model still ranks images
-correctly. It scores every image lower. Our threshold then sits in the wrong
-place.
+Noise is where the model struggles. At sigma 0.10, 76% of generated images are
+caught, against 99% on clean ones. AUROC only slips from 0.9993 to 0.9844, so
+the ordering is intact. This means the scores have drifted below a threshold
+set on clean data.
 
 ### Out-of-distribution evaluation
 
-In-domain numbers flatter every detector. We ran the model over all 4,998 COCO
-val2017 photos. It saw nothing like them during training.
+We ran the model over all 5,000 COCO val2017 photos, since in-domain results
+tend to overstate how well a detector generalises.
 
 | Threshold | False positive rate |
 |---|---|
@@ -49,14 +46,14 @@ val2017 photos. It saw nothing like them during training.
 | 0.6109 (picked on SID_Set) | 0.78% |
 | 0.9 | 0.12% |
 
-Half the COCO images score below 0.0007. We tuned the 0.6109 threshold to flag
-1% of SID_Set photos. It flags 0.78% of COCO photos, so it holds on real images
+Half of COCO scores below 0.0007. We tuned the 0.6109 threshold to flag 1% of
+SID_Set photos. Here it flags 0.78%, which means it transfers to real images
 from a new source.
 
-We then scored the AIGC half: all 8,843 images of **DALL-E 3 Advanced**, the
-generated set the organisers specify. Together with COCO that gives us their
-full demonstration set, 5,000 real images against 8,843 generated ones, from
-sources our training data never covered.
+For the generated half we used all 8,843 images of DALL-E 3 Advanced. Together
+with COCO that forms the demonstration benchmark named in the brief. That gives
+us 5,000 real images against 8,843 generated ones, all from sources absent from
+our training data.
 
 **AUROC on the demonstration set: 0.9574.**
 
@@ -66,83 +63,85 @@ sources our training data never covered.
 | 0.6109 (picked on SID_Set) | 0.78% | 47.7% |
 | 0.9 | 0.12% | 13.9% |
 
-Recalibrating on this set gives 51.7% detection at 1% FPR, at a threshold of
-0.5764.
+Recalibrating on this set causes detection to reach 51.7% at 1% FPR, with the
+threshold moving down to 0.5764.
 
-Read those numbers together. AUROC of 0.9574 means the model still ranks
-generated images above real ones. Detection near 50% means our threshold sits
-too high. The median DALL-E 3 image scores 0.5917, just under the cut, so the
-model finds these images suspicious and stops short of committing.
-
-We catch 98.9% of SID_Set synthetics and 47.7% of DALL-E 3 images at the same
-threshold. Ranking survives the move to an unseen generator. Calibration does
-not. This is the failure mode the problem statement warns about, and it sets
-our real ceiling.
+Those two numbers say different things. An AUROC of 0.9574 means generated
+images still sort above real ones almost every time. Detection near 50% means
+our cut lands in the wrong place. The median DALL-E 3 image scores 0.5917,
+which sits just under the threshold.
 
 ## Approach
 
-We freeze a CLIP ViT-B/16 encoder. We train a small MLP head on top of it. The
-encoder turns a 224-pixel patch into 768 numbers. The head reads those numbers
-and outputs one score. Only 395,777 parameters train. The whole run takes 70
-minutes on one GPU.
+A frozen CLIP ViT-B/16 encoder handles feature extraction, turning a 224-pixel
+patch into 768 numbers. A small MLP head then reads those numbers and outputs
+one score. This let us train on only 395,777 parameters, decreasing training
+time to 70 minutes on one GPU.
 
-During training we degrade each image first. We pick one challenge
-transformation at random. The head never learns to expect clean input.
+To keep the head from only ever seeing clean input, each image gets degraded
+before it reaches the encoder, using one challenge transformation picked at
+random.
 
-We crop each image at its native resolution. We never resize the whole image.
-That choice carried the project.
+CLIP ViT-B/16 holds about 150M parameters, against a limit of 2B.
 
 ### Native-resolution cropping
 
-SID_Set hands you a shortcut. Every synthetic image measures 1024x1024. Only
-3.8% of the real ones do. Resize whole images and the model reads aspect ratio
-instead of pixels. It then scores 98% here and fails everywhere else.
+SID_Set contains a shortcut. Every synthetic image measures 1024x1024, while
+only 3.8% of the real ones do. A model fed whole resized images can separate
+the two classes on aspect ratio alone, which would score well here and
+generalise to nothing.
 
-A fixed 224 crop hides the image dimensions. It also keeps the pixel statistics
-intact. Those statistics carry the generator fingerprints. Resizing smears
-them. Our COCO result suggests we avoided the shortcut.
-
-CLIP ViT-B/16 holds about 150M parameters. The limit is 2B.
+Cropping a fixed 224 patch removes image dimensions from the input entirely. It
+also leaves the pixel statistics intact, and generator fingerprints live in
+those statistics rather than in the composition. Our COCO false positive rate
+is consistent with having avoided the shortcut, though we did not train a
+resize-based model to confirm it.
 
 ## Tools and libraries
 
-- **Development:** Python 3.12, Git, tmux over SSH, VS Code
-- **Hardware:** AMD Radeon RX 7900 XTX, ROCm 7.1, PyTorch 2.13
+- **Development:** VS Code, Git
+- **Hardware:** AMD Radeon RX 7900 XTX, ROCm 7.1
 - **Model:** `openai/clip-vit-base-patch16` plus our own MLP head, no external API
-- **Libraries:** PyTorch, Transformers, pyarrow, scikit-learn, NumPy, Pillow
+- **Libraries:** Python 3.12, PyTorch 2.13, Transformers, pyarrow, scikit-learn, NumPy, Pillow
 
 ## Data
 
-We trained on [SID_Set](https://huggingface.co/datasets/saberzl/SID_Set). It
-gives us 140,000 training rows and 20,000 validation rows once we drop the
-`tampered` class. It ships as parquet shards. We read images from those shards
-straight into memory. Saving them back as JPEG would add compression artifacts
-and corrupt our signal.
+Training data comes from [SID_Set](https://huggingface.co/datasets/saberzl/SID_Set),
+which gives 140,000 rows for training and 20,000 for validation once the
+`tampered` class is dropped. Images are decoded straight into memory and never
+written back to disk, since re-encoding them as JPEG would add compression
+artifacts and obscure the generator fingerprints the model reads.
 
-We evaluated against COCO val2017 for real-image false positives.
+Evaluation uses COCO val2017 and DALL-E 3 Advanced.
 
-We left WildFake alone. The organisers built the demo set from it. Training on
-it would poison our own benchmark.
+WildFake stayed out of training entirely, since the demonstration set is drawn
+from it. Training on it would have contaminated our own evaluation.
 
-We also skipped CIFAKE. The brief lists it, but its images are 32x32. JPEG
-quality 30 deletes a 32x32 image. So does blur at sigma 2.0. Neither simulates
-a social media re-encode at that size. CLIP also needs 224 pixels, so every
-image needs a 7x upscale. That upscale stamps resampling artifacts onto the
-training set. Real test images carry no such artifacts.
-
-Raw images, full checkpoints, and prediction dumps stay out of Git. The trained
-head weighs 1.6MB and ships in the repo.
+We also skipped CIFAKE, despite the brief listing it. Its images are 32x32, and
+at that size JPEG quality 30 removes most of the detail rather than simulating
+a social media re-encode. Blur at sigma 2.0 has the same effect. CLIP needs 224
+pixels as well, so every image would need a 7x upscale, stamping resampling
+artifacts across the training set that no real test image carries.
 
 ## Setup
 
 ```bash
 python3.12 -m venv .venv
 .venv/bin/pip install --upgrade pip
-.venv/bin/pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm7.1
-.venv/bin/pip install transformers pyarrow numpy pillow pandas scikit-learn tqdm pyyaml
 ```
 
-Swap the PyTorch index for the CUDA or CPU one if you do not run ROCm.
+### CUDA
+
+```bash
+.venv/bin/pip install -r requirements.txt
+```
+
+### ROCm
+
+```bash
+.venv/bin/pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm7.1
+.venv/bin/pip install -r requirements.txt
+```
 
 ## Reproducing results
 
@@ -150,7 +149,7 @@ Swap the PyTorch index for the CUDA or CPU one if you do not run ROCm.
 # 1. Fetch SID_Set. 126GB.
 .venv/bin/hf download saberzl/SID_Set --repo-type dataset --local-dir data/raw/SID_Set
 
-# 2. Build the manifests. Reads metadata columns only, finishes in seconds.
+# 2. Build the manifests.
 .venv/bin/python scripts/build_sidset_manifest.py
 
 # 3. Train. Roughly 70 minutes on an RX 7900 XTX.
@@ -160,7 +159,19 @@ Swap the PyTorch index for the CUDA or CPU one if you do not run ROCm.
 .venv/bin/python scripts/evaluate.py --limit 2000
 ```
 
-Skip step 3 if you want. `checkpoints/head_only.pt` holds our trained weights.
+Step 3 is optional, since `checkpoints/head_only.pt` already holds our trained
+weights.
+
+COCO val2017 downloads from http://images.cocodataset.org/zips/val2017.zip. The
+DALL-E 3 Advanced images sit inside WildFake on ModelScope, under
+`Images/Diffusion_based/DALLE.zip`, in the `DALLE/Advanced` folder once
+unzipped. The demonstration set numbers come from running inference over each
+source and comparing the score distributions:
+
+```bash
+.venv/bin/python scripts/infer.py --input path/to/coco/val2017 --output outputs/coco_val2017.json
+.venv/bin/python scripts/infer.py --input path/to/DALLE/Advanced --output outputs/dalle3_advanced.json
+```
 
 ## Directory inference
 
@@ -171,8 +182,8 @@ Skip step 3 if you want. `checkpoints/head_only.pt` holds our trained weights.
   --output outputs/predictions.json
 ```
 
-Each score averages five 224 crops at native resolution. That mirrors how we
-trained. You get a JSON array back:
+Every score averages five 224 crops taken at native resolution, which reduces
+the variance from any single crop. The output is a JSON array:
 
 ```json
 [
@@ -184,64 +195,79 @@ trained. You get a JSON array back:
 ## Repository layout
 
 ```text
+configs/                 Experiment settings
 data/manifests/          CSV manifests, one row per image
 scripts/                 build_sidset_manifest.py, train.py, evaluate.py, infer.py
 src/aigc_detector/       transforms.py, dataset.py, model.py
+tests/                   Output format and augmentation checks
 checkpoints/             head_only.pt, our trained MLP head
-outputs/                 Metrics tables and prediction dumps
+outputs/                 Metrics tables and the prediction dumps behind our numbers
 ```
+
+The repository excludes raw images and full checkpoints. The trained head is
+included, allowing the detector to run without retraining.
 
 ## Limitations
 
-**Detection halves on an unseen generator.** We catch 98.9% of SID_Set
-synthetics and 47.7% of DALL-E 3 images at the same threshold. Generator
-coverage sets our ceiling, not model capacity or training length. Training on
-one source teaches one family of fingerprints.
+Our detection rate halves against a generator absent from training. We catch
+98.9% of SID_Set synthetics but only 47.7% of DALL-E 3 images at the same
+threshold, which points at generator coverage as the binding constraint rather
+than model capacity or training length. A single training source teaches one
+family of fingerprints.
 
-**A single threshold does not travel.** AUROC holds at 0.9574 across the
-demonstration set, so the ordering stays sound. The score distribution shifts
-under a new generator, and our cut sits above most DALL-E 3 images. Any
-deployment needs recalibration per source.
+The threshold itself does not transfer either. AUROC stays at 0.9574 across the
+demonstration set, so the ordering remains correct, but the score distribution
+shifts under a new generator and our cut sits above most DALL-E 3 images. The
+same pattern appears under heavy noise, where sigma 0.10 barely moves AUROC yet
+pushes the 1% FPR threshold a long way. Either case would require recalibration
+before deployment, or a quality estimate feeding the decision.
 
-**We ignore tampered images.** SID_Set's `tampered` class holds real
-photographs with AI-edited regions. We dropped them from training. Score them
-anyway and they land between 0.0001 and 0.62. Partial edits sit outside what
-this model decides.
+DALL-E 3 shipped in 2023, so our one out-of-domain generator is already dated.
+Current models leave different artifacts, and a single held-out generator gives
+one data point rather than a transfer curve.
 
-**Calibration breaks before ranking does.** Heavy noise barely moves AUROC. It
-shifts our 1% FPR threshold a long way. A deployment needs per-condition
-thresholds, or a quality estimate feeding the decision.
-
-**We never tested cross-generator transfer systematically.** One unseen
-generator gave us one data point. Holding out generators inside training would
-measure the effect properly.
+We did not train on tampered images. SID_Set's `tampered` class holds real
+photographs with AI-edited regions, which we dropped, and their scores scatter
+between 0.0001 and 0.62 when we run them through anyway.
 
 ## Future work
 
-**Test against current generators.** DALL-E 3 shipped in 2023. Today's models
-leave different artifacts, so our 47.7% measures an old target. GenImage covers
-eight generators including Midjourney and several Stable Diffusion versions.
-Chameleon collects images that already fooled human annotators. WildRF scrapes
-from Reddit, Facebook, and Twitter, so its degradations are real rather than
-simulated.
+The obvious next step is broader generator coverage. GenImage supplies eight,
+including Midjourney and two Stable Diffusion versions, and Chameleon supplies
+around 26,000 test images scraped from AI art communities, all of which fooled
+human annotators. WildRF would test the degradation side, since its images come
+from Facebook, Reddit and Twitter rather than a simulated pipeline.
 
-**Run leave-one-generator-out.** Train on every generator but one, test on the
-held-out one, then rotate. That yields a transfer curve instead of a single
-number, and it shows whether adding generators keeps helping or saturates.
+None of those solve the currency problem on their own, because their generators
+date from 2022 and 2023. Models released since then, such as Z-Image, Flux and
+Qwen-Image, appear in far smaller benchmarks like DiTFake, or in nothing public
+at all. We could build our own dataset instead, generating images locally from
+current models and pairing them with photographs, which would close the gap
+faster than waiting for a public benchmark.
 
-**Add a forensic branch.** CLIP learned to match images against captions, so
-its features describe content. Generator fingerprints are not content. They sit
-in high-frequency residuals, frequency-domain spectra, and noise prints. Those
-signals track how an image was synthesised rather than what it shows, so they
-should age better as generators improve.
+With several generators in hand, we could train on all but one and test on the
+held-out one, rotating through each in turn. That produces a transfer curve
+rather than the single data point we have now.
 
-**Add a consistency loss.** Pull clean and degraded versions of one image
-toward the same embedding. That attacks the robustness gap head on.
-Augmentation alone only hopes to cover it.
+Relying on CLIP alone is the deeper problem. It was trained to match images
+against captions, so its features describe content, and generator fingerprints
+are not content. They sit in high-frequency residuals, frequency spectra and
+noise prints, which a second branch could read alongside the semantic features.
 
-**Unfreeze the last two encoder blocks.** We train 396K parameters against a 2B
-budget. The encoder currently cannot adapt toward forensic features at all.
+Two smaller changes are cheap enough to try immediately. A consistency loss
+would pull clean and degraded versions of the same image toward one embedding,
+which targets the robustness gap directly. Unfreezing the last two encoder
+blocks would let the encoder adapt at all, and 150M parameters against a 2B
+limit leaves room for it.
 
 ## Team contributions
 
-TODO
+Irvin set up the project scaffold, the CIFAKE data pipeline, and the first
+training and evaluation entry points. He also built the demo interface and
+produced the video.
+
+Tristan replaced the data pipeline with SID_Set, wrote the transformation grid,
+the streaming dataset and the detector head, ran the training, robustness and
+demonstration set evaluations, and wrote this README.
+
+Elijah designed the video thumbnail.

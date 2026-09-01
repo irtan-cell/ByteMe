@@ -275,18 +275,6 @@ which targets the robustness gap directly. Unfreezing the last two encoder
 blocks would let the encoder adapt at all, and 150M parameters against a 2B
 limit leaves room for it.
 
-## Team contributions
-
-Irvin set up the project scaffold, the CIFAKE data pipeline, and the first
-training and evaluation entry points. He also built the demo interface and
-produced the video.
-
-Tristan replaced the data pipeline with SID_Set, wrote the transformation grid,
-the streaming dataset and the detector head, ran the training, robustness and
-demonstration set evaluations, and wrote this README.
-
-Elijah designed the video thumbnail.
-
 ## Error analysis
 
 Our worst false positives are real COCO photographs scoring 0.91 to 0.97, five
@@ -303,3 +291,15 @@ median DALL-E 3 image scores 0.5917, just below our threshold of 0.6109. The
 model finds most of these images suspicious without committing, which is why
 AUROC stays at 0.9574 while detection sits near 50%. A threshold recalibrated
 on this source recovers 51.7% at the same 1% false positive rate.
+
+## Team contributions
+
+Irvin set up the project scaffold, the CIFAKE data pipeline, and the first
+training and evaluation entry points. He also built the demo interface and
+produced the video.
+
+Tristan replaced the data pipeline with SID_Set, wrote the transformation grid,
+the streaming dataset and the detector head, ran the training, robustness and
+demonstration set evaluations, and wrote this README.
+
+Elijah designed the video thumbnail.

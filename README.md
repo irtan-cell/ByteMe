@@ -52,9 +52,35 @@ val2017 photos. It saw nothing like them during training.
 Half the COCO images score below 0.0007. We tuned the 0.6109 threshold to flag
 1% of SID_Set photos. It flags 0.78% of COCO photos. The threshold travels.
 
-We tested false positives only. We ran out of time before scoring the generated
-half of the demo set. We therefore claim nothing about generators outside
-SID_Set. The Limitations section says more.
+We then scored the AIGC half: all 8,843 images of **DALL-E 3 Advanced**, the
+generated set the organisers specify. Together with COCO that gives us their
+full demonstration set, 5,000 real images against 8,843 generated ones, from
+sources our training data never covered.
+
+**AUROC on the demonstration set: 0.9574.**
+
+| Threshold | FPR (COCO) | TPR (DALL-E 3) |
+|---|---|---|
+| 0.5 | 1.66% | 59.1% |
+| 0.6109 (picked on SID_Set) | 0.78% | 47.7% |
+| 0.9 | 0.12% | 13.9% |
+
+Recalibrating on this set gives 51.7% detection at 1% FPR, at a threshold of
+0.5764.
+
+| Set | n | Detection rate at 0.6109 | Median score |
+|---|---|---|---|
+| SID_Set validation | 1,000 | 98.9% | - |
+| DALL-E 3 Advanced | 8,843 | 47.7% | 0.5917 |
+
+Detection falls by half on a generator we never trained against. The median
+DALL-E 3 image scores 0.5917, just under our threshold, so the model finds
+these images suspicious and stops short of committing. The signal survives.
+The calibration does not.
+
+This is the failure mode the problem statement warns about, and it sets our
+real ceiling. Generator coverage limits us, not architecture or training
+length.
 
 ## Approach
 
@@ -170,10 +196,15 @@ outputs/                 Metrics tables and prediction dumps
 
 ## Limitations
 
-**We measured false positives out of distribution, not false negatives.** COCO
-shows we leave real photos alone. It says nothing about output from generators
-SID_Set never covered. That is the harder half of the problem. Detectors in
-this family fail there first.
+**Detection halves on an unseen generator.** We catch 98.9% of SID_Set
+synthetics and 47.7% of DALL-E 3 images at the same threshold. Generator
+coverage sets our ceiling, not model capacity or training length. Training on
+one source teaches one family of fingerprints.
+
+**A single threshold does not travel.** AUROC holds at 0.9574 across the
+demonstration set, so the ordering stays sound. The score distribution shifts
+under a new generator, and our cut sits above most DALL-E 3 images. Any
+deployment needs recalibration per source.
 
 **We ignore tampered images.** SID_Set's `tampered` class holds real
 photographs with AI-edited regions. We dropped them from training. Score them

@@ -8,3 +8,4 @@ numpy>=1.26
 PyYAML>=6.0
 tqdm>=4.66
 pytest>=8.3
+Flask>=3.0

@@ -50,7 +50,8 @@ val2017 photos. It saw nothing like them during training.
 | 0.9 | 0.12% |
 
 Half the COCO images score below 0.0007. We tuned the 0.6109 threshold to flag
-1% of SID_Set photos. It flags 0.78% of COCO photos. The threshold travels.
+1% of SID_Set photos. It flags 0.78% of COCO photos, so it holds on real images
+from a new source.
 
 We then scored the AIGC half: all 8,843 images of **DALL-E 3 Advanced**, the
 generated set the organisers specify. Together with COCO that gives us their
@@ -68,19 +69,15 @@ sources our training data never covered.
 Recalibrating on this set gives 51.7% detection at 1% FPR, at a threshold of
 0.5764.
 
-| Set | n | Detection rate at 0.6109 | Median score |
-|---|---|---|---|
-| SID_Set validation | 1,000 | 98.9% | - |
-| DALL-E 3 Advanced | 8,843 | 47.7% | 0.5917 |
+Read those numbers together. AUROC of 0.9574 means the model still ranks
+generated images above real ones. Detection near 50% means our threshold sits
+too high. The median DALL-E 3 image scores 0.5917, just under the cut, so the
+model finds these images suspicious and stops short of committing.
 
-Detection falls by half on a generator we never trained against. The median
-DALL-E 3 image scores 0.5917, just under our threshold, so the model finds
-these images suspicious and stops short of committing. The signal survives.
-The calibration does not.
-
-This is the failure mode the problem statement warns about, and it sets our
-real ceiling. Generator coverage limits us, not architecture or training
-length.
+We catch 98.9% of SID_Set synthetics and 47.7% of DALL-E 3 images at the same
+threshold. Ranking survives the move to an unseen generator. Calibration does
+not. This is the failure mode the problem statement warns about, and it sets
+our real ceiling.
 
 ## Approach
 
@@ -215,13 +212,14 @@ this model decides.
 shifts our 1% FPR threshold a long way. A deployment needs per-condition
 thresholds, or a quality estimate feeding the decision.
 
-**We trained on one source.** Generator diversity limits us now. Model size
-does not.
+**We never tested cross-generator transfer systematically.** One unseen
+generator gave us one data point. Holding out generators inside training would
+measure the effect properly.
 
 ## Future work
 
-1. Score the generated half of the demo set. Then hold out whole generators and
-   measure cross-generator transfer directly.
+1. Train across several generators, holding some out, and measure transfer
+   directly rather than inferring it from one unseen set.
 2. Add a consistency loss. It pulls clean and degraded versions of one image
    toward the same embedding. That attacks the robustness gap directly.
    Augmentation alone only hopes to cover it.

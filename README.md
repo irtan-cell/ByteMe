@@ -218,14 +218,29 @@ measure the effect properly.
 
 ## Future work
 
-1. Train across several generators, holding some out, and measure transfer
-   directly rather than inferring it from one unseen set.
-2. Add a consistency loss. It pulls clean and degraded versions of one image
-   toward the same embedding. That attacks the robustness gap directly.
-   Augmentation alone only hopes to cover it.
-3. Unfreeze the last two encoder blocks. We have the parameter budget spare.
-4. Add a forensic branch reading high-frequency residuals. CLIP's semantic
-   features should not carry this alone.
+**Test against current generators.** DALL-E 3 shipped in 2023. Today's models
+leave different artifacts, so our 47.7% measures an old target. GenImage covers
+eight generators including Midjourney and several Stable Diffusion versions.
+Chameleon collects images that already fooled human annotators. WildRF scrapes
+from Reddit, Facebook, and Twitter, so its degradations are real rather than
+simulated.
+
+**Run leave-one-generator-out.** Train on every generator but one, test on the
+held-out one, then rotate. That yields a transfer curve instead of a single
+number, and it shows whether adding generators keeps helping or saturates.
+
+**Add a forensic branch.** CLIP learned to match images against captions, so
+its features describe content. Generator fingerprints are not content. They sit
+in high-frequency residuals, frequency-domain spectra, and noise prints. Those
+signals track how an image was synthesised rather than what it shows, so they
+should age better as generators improve.
+
+**Add a consistency loss.** Pull clean and degraded versions of one image
+toward the same embedding. That attacks the robustness gap head on.
+Augmentation alone only hopes to cover it.
+
+**Unfreeze the last two encoder blocks.** We train 396K parameters against a 2B
+budget. The encoder currently cannot adapt toward forensic features at all.
 
 ## Team contributions
 

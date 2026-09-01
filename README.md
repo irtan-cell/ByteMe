@@ -286,3 +286,20 @@ the streaming dataset and the detector head, ran the training, robustness and
 demonstration set evaluations, and wrote this README.
 
 Elijah designed the video thumbnail.
+
+## Error analysis
+
+Our worst false positives are real COCO photographs scoring 0.91 to 0.97, five
+of roughly 5,000. At the calibrated threshold of 0.6109 the false positive rate
+is 0.78%, so around 39 authentic photos would be flagged.
+
+The false negatives are more revealing. The lowest-scoring DALL-E 3 images
+score 0.0000, and four of the five worst share an identical filename across
+different folders, which suggests duplicated images inside the WildFake DALL-E
+subset. Our 47.7% detection rate is computed over that set as published.
+
+The dominant error is not confident misclassification but indecision. The
+median DALL-E 3 image scores 0.5917, just below our threshold of 0.6109. The
+model finds most of these images suspicious without committing, which is why
+AUROC stays at 0.9574 while detection sits near 50%. A threshold recalibrated
+on this source recovers 51.7% at the same 1% false positive rate.

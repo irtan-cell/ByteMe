@@ -66,7 +66,8 @@ def main():
 
     ckpt = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
     model = Detector(unfreeze_last=ckpt.get("args", {}).get("unfreeze_last", 0))
-    model.load_state_dict(ckpt["model"])
+    # Head-only checkpoints omit the frozen encoder, which loads from the hub.
+    model.load_state_dict(ckpt["model"], strict=not ckpt.get("head_only"))
     model.to(args.device).eval()
 
     paths = find_images(args.input)

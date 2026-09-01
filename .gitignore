@@ -16,3 +16,4 @@ wandb/
 !notebooks/.gitkeep
 !checkpoints/.gitkeep
 !outputs/.gitkeep
+!checkpoints/head_only.pt

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Upload an image and estimate whether it was AI-generated.">
+    <title>ByteMe — AI Image Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="intro">
+        <a class="brand" href="/" aria-label="ByteMe home">
+          <span class="brand-mark" aria-hidden="true">B</span>
+          <span>ByteMe</span>
+        </a>
+        <p class="eyebrow">AI image detector</p>
+        <h1>Check an image in a few seconds.</h1>
+        <p class="description">
+          Upload one image and ByteMe will estimate how likely it is to be AI-generated.
+        </p>
+      </header>
+
+      <section class="card" aria-labelledby="upload-title">
+        <div class="section-heading">
+          <span class="step">1</span>
+          <div>
+            <h2 id="upload-title">Choose an image</h2>
+            <p>JPG, PNG, WEBP, BMP, or TIFF · up to 15 MB</p>
+          </div>
+        </div>
+
+        <label class="upload-area" for="image-input">
+          <span class="upload-icon" aria-hidden="true">↑</span>
+          <strong>Click to select an image</strong>
+          <span>or drag and drop it here</span>
+        </label>
+        <input
+          id="image-input"
+          name="image"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/bmp,image/tiff"
+          hidden
+        >
+
+        <div id="preview-section" class="preview-section" hidden>
+          <img id="image-preview" alt="Selected image preview">
+          <div class="file-details">
+            <strong id="file-name"></strong>
+            <span id="file-size"></span>
+          </div>
+        </div>
+
+        <button id="analyse-button" class="primary-button" type="button" disabled>
+          Analyse image
+        </button>
+        <p id="error-message" class="error-message" role="alert" hidden></p>
+      </section>
+
+      <section id="result-card" class="card result-card" aria-live="polite" hidden>
+        <div class="section-heading">
+          <span class="step">2</span>
+          <div>
+            <h2>Result</h2>
+            <p id="result-filename"></p>
+          </div>
+        </div>
+
+        <div class="score-row">
+          <div>
+            <p class="score-label">AI-generated likelihood</p>
+            <p id="verdict" class="verdict"></p>
+          </div>
+          <p class="score"><span id="score-value">0.0</span><span>%</span></p>
+        </div>
+        <div
+          class="meter"
+          role="progressbar"
+          aria-label="AI-generated likelihood"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+        >
+          <span id="meter-fill"></span>
+        </div>
+        <p class="disclaimer">
+          This score is an estimate, not proof. Image edits, compression, and unfamiliar generators may affect it.
+        </p>
+      </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>

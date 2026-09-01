@@ -56,16 +56,6 @@ input {
   text-decoration: none;
 }
 
-.brand-mark {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border-radius: 10px;
-  color: white;
-  background: var(--accent);
-}
-
 .eyebrow {
   margin: 0 0 12px;
   color: var(--accent-dark);

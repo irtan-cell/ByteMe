@@ -158,6 +158,21 @@ trained. You get a JSON array back:
 ]
 ```
 
+## Local web interface
+
+The ByteMe interface lets you select an image, preview it, and run the same
+five-crop detector from a browser. From the repository root on Windows:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python app.py
+```
+
+Then open `http://127.0.0.1:5000`. The first analysis may take longer while
+the CLIP backbone is loaded. Uploaded images are processed in memory and are
+not saved by the app.
+
 ## Repository layout
 
 ```text

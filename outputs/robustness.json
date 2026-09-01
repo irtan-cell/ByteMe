@@ -1,0 +1,111 @@
+{
+  "n_images": 2000,
+  "checkpoint": "checkpoints/best.pt",
+  "conditions": {
+    "clean": {
+      "auroc": 0.9993,
+      "acc@0.5": 0.9905,
+      "tpr@1%fpr": 0.9888,
+      "threshold@1%fpr": 0.6109,
+      "auroc_gap_vs_clean": 0.0
+    },
+    "jpeg_90": {
+      "auroc": 0.9988,
+      "acc@0.5": 0.9865,
+      "tpr@1%fpr": 0.9746,
+      "threshold@1%fpr": 0.7649,
+      "auroc_gap_vs_clean": 0.0005
+    },
+    "jpeg_70": {
+      "auroc": 0.9985,
+      "acc@0.5": 0.981,
+      "tpr@1%fpr": 0.9705,
+      "threshold@1%fpr": 0.7535,
+      "auroc_gap_vs_clean": 0.0008
+    },
+    "jpeg_50": {
+      "auroc": 0.9977,
+      "acc@0.5": 0.9775,
+      "tpr@1%fpr": 0.9543,
+      "threshold@1%fpr": 0.8808,
+      "auroc_gap_vs_clean": 0.0016
+    },
+    "jpeg_30": {
+      "auroc": 0.9954,
+      "acc@0.5": 0.964,
+      "tpr@1%fpr": 0.9299,
+      "threshold@1%fpr": 0.9161,
+      "auroc_gap_vs_clean": 0.0039
+    },
+    "blur_0.5": {
+      "auroc": 0.9993,
+      "acc@0.5": 0.9875,
+      "tpr@1%fpr": 0.9858,
+      "threshold@1%fpr": 0.5061,
+      "auroc_gap_vs_clean": 0.0
+    },
+    "blur_1.0": {
+      "auroc": 0.9986,
+      "acc@0.5": 0.9825,
+      "tpr@1%fpr": 0.9756,
+      "threshold@1%fpr": 0.5732,
+      "auroc_gap_vs_clean": 0.0007
+    },
+    "blur_2.0": {
+      "auroc": 0.9962,
+      "acc@0.5": 0.9715,
+      "tpr@1%fpr": 0.9004,
+      "threshold@1%fpr": 0.9161,
+      "auroc_gap_vs_clean": 0.0031
+    },
+    "resize_0.5": {
+      "auroc": 0.9984,
+      "acc@0.5": 0.9785,
+      "tpr@1%fpr": 0.9695,
+      "threshold@1%fpr": 0.7356,
+      "auroc_gap_vs_clean": 0.0009
+    },
+    "resize_0.25": {
+      "auroc": 0.9964,
+      "acc@0.5": 0.9685,
+      "tpr@1%fpr": 0.9238,
+      "threshold@1%fpr": 0.8697,
+      "auroc_gap_vs_clean": 0.0029
+    },
+    "noise_0.02": {
+      "auroc": 0.9964,
+      "acc@0.5": 0.9705,
+      "tpr@1%fpr": 0.9045,
+      "threshold@1%fpr": 0.923,
+      "auroc_gap_vs_clean": 0.0029
+    },
+    "noise_0.05": {
+      "auroc": 0.9916,
+      "acc@0.5": 0.9535,
+      "tpr@1%fpr": 0.8669,
+      "threshold@1%fpr": 0.9425,
+      "auroc_gap_vs_clean": 0.0077
+    },
+    "noise_0.1": {
+      "auroc": 0.9844,
+      "acc@0.5": 0.933,
+      "tpr@1%fpr": 0.7561,
+      "threshold@1%fpr": 0.9274,
+      "auroc_gap_vs_clean": 0.0149
+    },
+    "jitter_20": {
+      "auroc": 0.9991,
+      "acc@0.5": 0.985,
+      "tpr@1%fpr": 0.9817,
+      "threshold@1%fpr": 0.6252,
+      "auroc_gap_vs_clean": 0.0002
+    },
+    "crop_80": {
+      "auroc": 0.9993,
+      "acc@0.5": 0.9895,
+      "tpr@1%fpr": 0.9909,
+      "threshold@1%fpr": 0.3998,
+      "auroc_gap_vs_clean": 0.0
+    }
+  }
+}
